@@ -1,1 +1,944 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unibooking — Tracker de Leads</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Oswald:wght@500;600&display=swap');
 
+:root {
+  --green: #024F41;
+  --orange: #FF644D;
+  --pink: #EDA8B3;
+  --blue: #71ACBF;
+  --cream: #F7EEDC;
+  --bg: #F4F2EE;
+  --surface: #ffffff;
+  --border: #E0DBD3;
+  --text: #1A1A1A;
+  --text-2: #6B6560;
+  --text-3: #9E9890;
+  --urgent-red-bg: #FFF0EE;
+  --urgent-red: #CC3A24;
+  --urgent-amber-bg: #FFF8EE;
+  --urgent-amber: #9A6100;
+  --urgent-green-bg: #EDFAF4;
+  --urgent-green: #016B44;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+.app-header {
+  background: var(--green);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 54px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo { font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
+.logo span { color: var(--orange); }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.btn-new { background: var(--orange); color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+.btn-new:hover { opacity: .88; }
+.btn-secondary { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 7px 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: background .15s; }
+.btn-secondary:hover { background: rgba(255,255,255,0.2); }
+
+.sync-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.sync-status { display: flex; align-items: center; gap: 7px; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.sync-dot.ok { background: #2ECC8A; }
+.sync-dot.syncing { background: var(--orange); animation: pulse 1s infinite; }
+.sync-dot.error { background: var(--urgent-red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.btn-sync { background: var(--green); color: #fff; border: none; border-radius: 5px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+.alert-banner { background: var(--urgent-red-bg); border-bottom: 1px solid #FFCFCA; padding: 9px 24px; font-size: 13px; color: var(--urgent-red); display: none; align-items: center; gap: 8px; }
+.alert-banner.visible { display: flex; }
+
+.stats-bar { background: var(--surface); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: repeat(6, 1fr); padding: 0 24px; }
+.stat { padding: 14px 0 12px; border-right: 1px solid var(--border); padding-right: 20px; padding-left: 4px; }
+.stat:last-child { border-right: none; }
+.stat:not(:first-child) { padding-left: 20px; }
+.stat-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 3px; }
+.stat-val { font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 500; color: var(--text); }
+.stat-val.red { color: var(--urgent-red); }
+.stat-val.orange { color: var(--orange); }
+.stat-val.green-c { color: var(--green); }
+.stat-val.blue-c { color: var(--blue); }
+.stat-val.reserva-c { color: #016B44; }
+
+.toolbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.toolbar input[type=text] { flex: 1; min-width: 160px; border: 1px solid var(--border); border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--bg); outline: none; }
+.toolbar input[type=text]:focus { border-color: var(--green); }
+.toolbar select { border: 1px solid var(--border); border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--bg); outline: none; cursor: pointer; }
+.filter-label { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+
+.board-wrap { overflow-x: auto; }
+.board { display: grid; grid-template-columns: repeat(6, minmax(200px, 1fr)); gap: 14px; padding: 20px 24px 40px; align-items: start; min-width: 1100px; }
+
+.col-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+.col-title { font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-2); }
+.col-title.reserva { color: var(--urgent-green); }
+.col-title.cerrado { color: var(--text-3); }
+.col-count { background: var(--border); color: var(--text-3); font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; min-width: 22px; text-align: center; }
+.col-count.reserva { background: var(--urgent-green-bg); color: var(--urgent-green); }
+.cards-container { display: flex; flex-direction: column; gap: 9px; min-height: 60px; }
+
+.card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 12px 13px; box-shadow: var(--shadow); cursor: pointer; transition: box-shadow .15s, transform .1s; position: relative; }
+.card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); transform: translateY(-1px); }
+.card.stage-reserva { border-color: #9FE1CB; background: #FAFFFD; }
+.card.saving { opacity: .6; pointer-events: none; }
+.card::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; }
+.card.urg-green::before { background: #2ECC8A; }
+.card.urg-amber::before { background: #F5A623; }
+.card.urg-red::before { background: var(--orange); }
+.card.urg-none::before { background: transparent; }
+
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+.card-name { font-weight: 500; font-size: 13px; color: var(--text); line-height: 1.3; padding-left: 8px; flex: 1; }
+.card-actions { display: flex; gap: 3px; flex-shrink: 0; }
+.icon-btn { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 14px; padding: 2px 3px; border-radius: 4px; transition: color .12s, background .12s; }
+.icon-btn:hover { color: var(--text); background: var(--bg); }
+
+.card-meta { padding-left: 8px; }
+.card-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 5px; }
+.tag { font-size: 10px; font-weight: 500; padding: 2px 6px; border-radius: 20px; }
+.tag-latam { background: #EEF5FF; color: #1A4FAD; }
+.tag-spain { background: #FFF0E5; color: #A84000; }
+.tag-europe { background: #F3F0FF; color: #4B38A0; }
+.tag-otro { background: var(--bg); color: var(--text-3); }
+.tag-student { background: #EDFAF4; color: #016B44; }
+.tag-parent { background: #FFF8EE; color: #9A6100; }
+.tag-fuente { background: var(--bg); color: var(--text-3); border: 1px solid var(--border); }
+
+.urgency-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; margin-top: 4px; }
+.ub-green { background: var(--urgent-green-bg); color: var(--urgent-green); }
+.ub-amber { background: var(--urgent-amber-bg); color: var(--urgent-amber); }
+.ub-red { background: var(--urgent-red-bg); color: var(--urgent-red); }
+
+.materials { display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0 4px 0; padding-left: 8px; }
+.mat-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-3); background: var(--bg); }
+.mat-chip.done { background: var(--urgent-green-bg); border-color: #9FE1CB; color: var(--urgent-green); }
+
+.card-next-action { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 5px; padding-left: 8px; }
+.card-next-action.overdue { color: var(--urgent-red); font-weight: 500; }
+.card-next-action.today { color: var(--urgent-amber); font-weight: 500; }
+.card-next-action.upcoming { color: var(--urgent-green); }
+
+.move-arrows { display: flex; gap: 2px; margin-top: 7px; padding-left: 8px; }
+.arrow-btn { background: none; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 6px; color: var(--text-3); transition: all .12s; }
+.arrow-btn:hover { border-color: var(--green); color: var(--green); }
+
+.btn-quick { background: var(--green); color: #fff; border: none; border-radius: 5px; padding: 4px 8px; font-size: 10px; cursor: pointer; margin-top: 6px; margin-left: 8px; display: inline-flex; align-items: center; gap: 3px; transition: opacity .12s; }
+.btn-quick:hover { opacity: .85; }
+
+.empty-col { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 18px 12px; text-align: center; color: var(--text-3); font-size: 12px; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(10,20,15,0.45); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.modal-header { background: var(--green); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.modal-title { font-family: 'Oswald', sans-serif; font-size: 16px; color: #fff; letter-spacing: 0.5px; }
+.modal-close { background: rgba(255,255,255,0.15); border: none; color: #fff; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+.modal-close:hover { background: rgba(255,255,255,0.25); }
+.modal-body { padding: 20px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.form-full { grid-column: 1 / -1; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea { border: 1px solid var(--border); border-radius: 6px; padding: 8px 11px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--bg); outline: none; transition: border-color .12s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--green); }
+.form-group textarea { resize: vertical; min-height: 65px; }
+
+.materials-section { background: #F0F8F5; border: 1px solid #C8E8DF; border-radius: 8px; padding: 13px; margin-top: 4px; }
+.next-action-section { background: #FFFBF5; border: 1px solid #F0DFC0; border-radius: 8px; padding: 13px; margin-top: 12px; }
+.section-title { font-size: 11px; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+.mat-checks { display: flex; gap: 10px; flex-wrap: wrap; }
+.mat-check-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); cursor: pointer; }
+.mat-check-label input[type=checkbox] { accent-color: var(--green); width: 15px; height: 15px; cursor: pointer; }
+.next-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.cadence-hint { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 11px; color: var(--text-2); margin-top: 8px; line-height: 1.6; }
+
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; bottom: 0; background: var(--surface); }
+.btn-save { background: var(--orange); color: #fff; border: none; border-radius: 6px; padding: 9px 20px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+.btn-save:hover { opacity: .88; }
+.btn-delete { background: none; color: var(--urgent-red); border: 1px solid #FFCFCA; border-radius: 6px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; }
+.btn-delete:hover { background: var(--urgent-red-bg); }
+.btn-cancel { background: none; color: var(--text-2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; }
+
+.log-section { margin-top: 14px; }
+.log-section-title { font-size: 11px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.log-list { display: flex; flex-direction: column; gap: 5px; max-height: 130px; overflow-y: auto; }
+.log-item { background: var(--bg); border-radius: 6px; padding: 7px 10px; font-size: 12px; color: var(--text-2); }
+.log-item .log-date { color: var(--text-3); font-size: 11px; margin-bottom: 2px; }
+.log-add { display: flex; gap: 8px; margin-top: 8px; }
+.log-add input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--bg); outline: none; }
+.log-add input:focus { border-color: var(--green); }
+.btn-log { background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+
+/* Login overlay */
+.login-overlay { display: none; position: fixed; inset: 0; background: rgba(2,79,65,0.97); z-index: 300; align-items: center; justify-content: center; flex-direction: column; gap: 20px; }
+.login-overlay.open { display: flex; }
+.login-box { background: var(--surface); border-radius: 16px; padding: 36px 40px; text-align: center; max-width: 360px; width: 100%; }
+.login-logo { font-family: 'Oswald', sans-serif; font-size: 24px; color: var(--green); margin-bottom: 8px; }
+.login-logo span { color: var(--orange); }
+.login-sub { font-size: 13px; color: var(--text-2); margin-bottom: 28px; }
+.btn-login { background: var(--orange); color: #fff; border: none; border-radius: 8px; padding: 12px 28px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; width: 100%; transition: opacity .15s; }
+.btn-login:hover { opacity: .88; }
+.login-note { font-size: 11px; color: rgba(255,255,255,0.5); text-align: center; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Login overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">UNI<span>BOOKING</span></div>
+    <div class="login-sub">Inicia sesión con tu cuenta de Microsoft para acceder al tracker de leads</div>
+    <button class="btn-login" onclick="signIn()">Iniciar sesión con Microsoft</button>
+  </div>
+  <div class="login-note">Unibooking Leads · Acceso restringido al equipo</div>
+</div>
+
+<header class="app-header">
+  <div class="logo">UNI<span>BOOKING</span> <span style="opacity:.4;font-size:13px;font-weight:300;letter-spacing:0">· LEADS</span></div>
+  <div class="header-right">
+    <span id="userDisplay" style="color:rgba(255,255,255,0.6);font-size:12px;"></span>
+    <button class="btn-secondary" onclick="syncFromExcel()" id="btnSync">↻ Sincronizar</button>
+    <button class="btn-new" onclick="openModal()">+ Nuevo lead</button>
+  </div>
+</header>
+
+<div class="sync-bar">
+  <div class="sync-status">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncText">Conectando...</span>
+  </div>
+  <button class="btn-sync" onclick="syncFromExcel()">Actualizar ahora</button>
+</div>
+
+<div class="alert-banner" id="alertBanner">
+  <span>⚠</span>
+  <span id="alertText"></span>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div class="toolbar">
+  <span class="filter-label">Filtrar:</span>
+  <input type="text" id="searchInput" placeholder="Nombre, email, notas..." oninput="renderBoard()">
+  <select id="filterPublico" onchange="renderBoard()">
+    <option value="">Todos los públicos</option>
+    <option value="estudiante">Estudiante</option>
+    <option value="padres">Padres</option>
+  </select>
+  <select id="filterOrigen" onchange="renderBoard()">
+    <option value="">Todos los orígenes</option>
+    <option value="LATAM">LATAM</option>
+    <option value="España">España</option>
+    <option value="Europa">Europa</option>
+    <option value="Otro">Otro</option>
+  </select>
+  <select id="filterUrgency" onchange="renderBoard()">
+    <option value="">Toda urgencia</option>
+    <option value="red">🔴 Urgente (+7 días)</option>
+    <option value="amber">🟡 Atención (3-6 días)</option>
+    <option value="green">🟢 Al día (0-2 días)</option>
+  </select>
+</div>
+
+<div class="board-wrap">
+  <div class="board" id="board"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Nuevo lead</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Nombre completo *</label>
+          <input type="text" id="f-name" placeholder="Ej. Carlos Mendoza">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="f-email" placeholder="email@ejemplo.com">
+        </div>
+        <div class="form-group">
+          <label>Teléfono / WhatsApp</label>
+          <input type="text" id="f-phone" placeholder="+34 / +52 ...">
+        </div>
+        <div class="form-group">
+          <label>Público</label>
+          <select id="f-publico">
+            <option value="estudiante">Estudiante</option>
+            <option value="padres">Padres</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Origen</label>
+          <select id="f-origen">
+            <option value="LATAM">LATAM</option>
+            <option value="España">España</option>
+            <option value="Europa">Europa</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fuente</label>
+          <select id="f-fuente">
+            <option value="">— sin especificar —</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Web">Web</option>
+            <option value="Referido">Referido</option>
+            <option value="WhatsApp directo">WhatsApp directo</option>
+            <option value="Feria">Feria</option>
+            <option value="UNAV">UNAV</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Etapa</label>
+          <select id="f-stage" onchange="updateCadenceHint()">
+            <option value="nuevo">Nuevo</option>
+            <option value="contactado">Contactado</option>
+            <option value="en-conversacion">En conversación</option>
+            <option value="info-enviada">Info enviada</option>
+            <option value="reserva">Reserva ✓</option>
+            <option value="cerrado">Cerrado</option>
+          </select>
+        </div>
+        <div class="form-group form-full" id="cadenceHintWrap">
+          <div class="cadence-hint" id="cadenceHint"></div>
+        </div>
+        <div class="form-group form-full">
+          <label>Notas</label>
+          <textarea id="f-notes" placeholder="Contexto relevante, piso de interés, compañeros..."></textarea>
+        </div>
+      </div>
+      <div class="materials-section" style="margin-top:14px;">
+        <div class="section-title">Materiales enviados</div>
+        <div class="mat-checks">
+          <label class="mat-check-label"><input type="checkbox" id="mat-dosier"> Dosier</label>
+          <label class="mat-check-label"><input type="checkbox" id="mat-fotos"> Fotos / galería</label>
+          <label class="mat-check-label"><input type="checkbox" id="mat-llamada"> Llamada realizada</label>
+          <label class="mat-check-label"><input type="checkbox" id="mat-video"> Vídeo del piso</label>
+        </div>
+      </div>
+      <div class="next-action-section">
+        <div class="section-title">Próxima acción</div>
+        <div class="next-action-grid">
+          <div class="form-group">
+            <label>Acción concreta</label>
+            <input type="text" id="f-next-action" placeholder="Ej. WhatsApp D3 — cambiar ángulo">
+          </div>
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" id="f-next-date">
+          </div>
+        </div>
+      </div>
+      <div class="log-section" id="logSection" style="display:none;">
+        <div class="log-section-title">Historial de contacto</div>
+        <div class="log-list" id="logList"></div>
+        <div class="log-add">
+          <input type="text" id="logInput" placeholder="Ej. WhatsApp enviado — sin respuesta">
+          <button class="btn-log" onclick="addLogEntry()">+ Añadir</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div>
+        <button class="btn-delete" id="btnDelete" style="display:none" onclick="deleteLead()">Eliminar</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-save" onclick="saveLead()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MSAL -->
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const CLIENT_ID  = '66def4e2-bf70-485d-8431-b9e5423497a5';
+const TENANT_ID  = 'e87475ea-972d-46e2-8022-9b10da058c69';
+const FILE_ID    = '618087B8-8DC5-497D-9F33-5234D65CA15E';
+const DRIVE_USER = 'me';
+const SHEET_NAME = 'Hoja1';
+const GRAPH      = 'https://graph.microsoft.com/v1.0';
+
+const msalConfig = {
+  auth: {
+    clientId: CLIENT_ID,
+    authority: `https://login.microsoftonline.com/common`,
+    knownAuthorities: ['login.microsoftonline.com'],
+    redirectUri: window.location.href.split('?')[0]
+  },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+};
+
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+const SCOPES = ['Files.ReadWrite', 'User.Read'];
+
+let accessToken = null;
+let leads = [];
+let editingId = null;
+let rowMap = {}; // lead.id → excel row number
+
+// ─── STAGES & CONSTANTS ───────────────────────────────────────────────────────
+const STAGES = [
+  { id: 'nuevo',           label: 'Nuevo' },
+  { id: 'contactado',      label: 'Contactado' },
+  { id: 'en-conversacion', label: 'En conversación' },
+  { id: 'info-enviada',    label: 'Info enviada' },
+  { id: 'reserva',         label: 'Reserva ✓' },
+  { id: 'cerrado',         label: 'Cerrado' }
+];
+
+const CADENCE_HINTS = {
+  'nuevo':           '⚡ <strong>Prioridad:</strong> contactar hoy mismo. Cada hora que pasa baja la probabilidad de respuesta.',
+  'contactado':      '📅 <strong>D1→D3:</strong> si no responde en 3 días, seguimiento suave — "¿te llegó bien la info?"',
+  'en-conversacion': '📅 <strong>Mantener el ritmo:</strong> responder rápido cuando hay actividad. Si se enfría, reactivar con fotos o testimonio.',
+  'info-enviada':    '📅 <strong>D3→D7:</strong> dar tiempo a que procesen, luego preguntar si tienen dudas. Cambiar ángulo si no responden.',
+  'reserva':         '✅ <strong>Cliente confirmado.</strong> Nada que hacer aquí en el tracker.',
+  'cerrado':         '🗄 <strong>Archivado.</strong> Candidato para campaña de remarketing en temporada alta.'
+};
+
+const MATERIALS = [
+  { id: 'mat-dosier',  label: 'Dosier',  key: 'dosier'  },
+  { id: 'mat-fotos',   label: 'Fotos',   key: 'fotos'   },
+  { id: 'mat-llamada', label: 'Llamada', key: 'llamada' },
+  { id: 'mat-video',   label: 'Vídeo',   key: 'video'   }
+];
+
+const COLS = ['id','nombre','email','telefono','publico','origen','fuente','etapa',
+              'dosier','fotos','llamada','video','nextAction','nextDate',
+              'lastContact','createdAt','notes','log'];
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+async function init() {
+  await msalInstance.initialize();
+
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    msalInstance.setActiveAccount(accounts[0]);
+    await acquireToken();
+    showApp();
+  } else {
+    document.getElementById('loginOverlay').classList.add('open');
+  }
+}
+
+async function signIn() {
+  await msalInstance.loginPopup({ scopes: SCOPES }).then(resp => { accessToken = resp.accessToken; showApp(); }).catch(e => console.error(e));
+}
+
+async function acquireToken() {
+  try {
+    const res = await msalInstance.acquireTokenSilent({ scopes: SCOPES });
+    accessToken = res.accessToken;
+    const account = msalInstance.getActiveAccount();
+    if (account) document.getElementById('userDisplay').textContent = account.username;
+  } catch(e) {
+    const resp = await msalInstance.acquireTokenPopup({ scopes: SCOPES }); accessToken = resp.accessToken;
+  }
+}
+
+function showApp() {
+  document.getElementById('loginOverlay').classList.remove('open');
+  syncFromExcel();
+}
+
+// ─── GRAPH API ────────────────────────────────────────────────────────────────
+async function graphRequest(method, path, body) {
+  if (!accessToken) await acquireToken();
+  const res = await fetch(`${GRAPH}${path}`, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (res.status === 401) { await acquireToken(); return graphRequest(method, path, body); }
+  if (!res.ok) throw new Error(`Graph error ${res.status}: ${await res.text()}`);
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+function excelPath(segment) {
+  return `/users/oficina@unibookingpamplona.onmicrosoft.com/drive/items/${FILE_ID}/workbook/worksheets('${SHEET_NAME}')${segment}`;
+}
+
+// ─── SYNC FROM EXCEL ──────────────────────────────────────────────────────────
+async function syncFromExcel() {
+  setSyncState('syncing', 'Sincronizando...');
+  try {
+    const data = await graphRequest('GET', excelPath('/usedRange'));
+    const rows = data.values;
+    if (!rows || rows.length < 2) { leads = []; rowMap = {}; renderBoard(); renderStats(); setSyncState('ok', `Sincronizado · ${fmtTime()}`); return; }
+
+    const headers = rows[0].map(h => (h||'').toString().toLowerCase().trim());
+    const idx = (name) => headers.indexOf(name);
+
+    leads = [];
+    rowMap = {};
+
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const id = (r[idx('id')]||'').toString().trim();
+      if (!id) continue;
+      const lead = {
+        id,
+        name:       (r[idx('nombre')]||'').toString(),
+        email:      (r[idx('email')]||'').toString(),
+        phone:      (r[idx('telefono')]||'').toString(),
+        publico:    (r[idx('publico')]||'estudiante').toString(),
+        origen:     (r[idx('origen')]||'Otro').toString(),
+        fuente:     (r[idx('fuente')]||'').toString(),
+        stage:      (r[idx('etapa')]||'nuevo').toString(),
+        nextAction: (r[idx('nextaction')]||'').toString(),
+        nextDate:   (r[idx('nextdate')]||'').toString(),
+        lastContact:(r[idx('lastcontact')]||'').toString(),
+        createdAt:  (r[idx('createdat')]||'').toString(),
+        notes:      (r[idx('notes')]||'').toString(),
+        materials: {
+          dosier:  isTruthy(r[idx('dosier')]),
+          fotos:   isTruthy(r[idx('fotos')]),
+          llamada: isTruthy(r[idx('llamada')]),
+          video:   isTruthy(r[idx('video')])
+        },
+        log: parseLog(r[idx('log')])
+      };
+      leads.push(lead);
+      rowMap[id] = i + 1; // 1-indexed, row 1 is header
+    }
+
+    renderBoard();
+    renderStats();
+    setSyncState('ok', `Sincronizado · ${fmtTime()}`);
+  } catch(e) {
+    console.error(e);
+    setSyncState('error', 'Error al sincronizar — reintenta');
+  }
+}
+
+// ─── WRITE TO EXCEL ───────────────────────────────────────────────────────────
+async function writeLeadToExcel(lead) {
+  const row = leadToRow(lead);
+  const excelRow = rowMap[lead.id];
+
+  if (excelRow) {
+    // Update existing row
+    const range = `A${excelRow}:R${excelRow}`;
+    await graphRequest('PATCH', excelPath(`/range(address='${range}')`), { values: [row] });
+  } else {
+    // Append new row — find next empty row
+    const data = await graphRequest('GET', excelPath('/usedRange'));
+    const nextRow = data.values ? data.values.length + 1 : 2;
+    const range = `A${nextRow}:R${nextRow}`;
+    await graphRequest('PATCH', excelPath(`/range(address='${range}')`), { values: [row] });
+    rowMap[lead.id] = nextRow;
+  }
+}
+
+async function deleteLeadFromExcel(lead) {
+  const excelRow = rowMap[lead.id];
+  if (!excelRow) return;
+  // Clear the row
+  const range = `A${excelRow}:R${excelRow}`;
+  await graphRequest('PATCH', excelPath(`/range(address='${range}')`), {
+    values: [Array(18).fill('')]
+  });
+}
+
+function leadToRow(lead) {
+  const m = lead.materials || {};
+  return [
+    lead.id, lead.name, lead.email, lead.phone, lead.publico, lead.origen,
+    lead.fuente, lead.stage, m.dosier?'Sí':'No', m.fotos?'Sí':'No',
+    m.llamada?'Sí':'No', m.video?'Sí':'No', lead.nextAction||'',
+    lead.nextDate||'', lead.lastContact||'', lead.createdAt||'',
+    lead.notes||'', serializeLog(lead.log||[])
+  ];
+}
+
+function parseLog(val) {
+  if (!val) return [];
+  try { return JSON.parse(val.toString()); } catch(e) { return []; }
+}
+
+function serializeLog(log) {
+  return JSON.stringify(log||[]);
+}
+
+function isTruthy(v) {
+  if (!v) return false;
+  const s = v.toString().toLowerCase().trim();
+  return s === 'sí' || s === 'si' || s === 'yes' || s === '1' || s === 'true';
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function fmtTime() { return new Date().toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}); }
+
+function setSyncState(state, text) {
+  const dot = document.getElementById('syncDot');
+  dot.className = `sync-dot ${state}`;
+  document.getElementById('syncText').textContent = text;
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 0;
+  const days = Math.floor((new Date() - d) / 86400000);
+  return Math.max(0, days);
+}
+
+function urgency(lead) {
+  if (lead.stage === 'cerrado' || lead.stage === 'reserva') return 'none';
+  const days = daysSince(lead.lastContact || lead.createdAt);
+  if (days >= 7) return 'red';
+  if (days >= 3) return 'amber';
+  return 'green';
+}
+
+function urgencyLabel(lead) {
+  const days = daysSince(lead.lastContact || lead.createdAt);
+  if (days === 0) return 'Hoy';
+  if (days === 1) return 'Ayer';
+  return `${days}d sin contacto`;
+}
+
+function nextActionStatus(lead) {
+  if (!lead.nextDate) return 'none';
+  const today = new Date().toISOString().slice(0,10);
+  if (lead.nextDate < today) return 'overdue';
+  if (lead.nextDate === today) return 'today';
+  return 'upcoming';
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}`;
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function getFilters() {
+  return {
+    search:   document.getElementById('searchInput').value.toLowerCase(),
+    publico:  document.getElementById('filterPublico').value,
+    origen:   document.getElementById('filterOrigen').value,
+    urgency:  document.getElementById('filterUrgency').value
+  };
+}
+
+function filterLead(lead, f) {
+  if (f.search && !((lead.name||'').toLowerCase().includes(f.search) || (lead.email||'').toLowerCase().includes(f.search) || (lead.notes||'').toLowerCase().includes(f.search))) return false;
+  if (f.publico && lead.publico !== f.publico) return false;
+  if (f.origen && lead.origen !== f.origen) return false;
+  if (f.urgency && urgency(lead) !== f.urgency) return false;
+  return true;
+}
+
+function renderStats() {
+  const total   = leads.length;
+  const active  = leads.filter(l => !['cerrado','reserva'].includes(l.stage)).length;
+  const reserva = leads.filter(l => l.stage === 'reserva').length;
+  const cerrado = leads.filter(l => l.stage === 'cerrado').length;
+  const latam   = leads.filter(l => l.origen === 'LATAM').length;
+  const urgent  = leads.filter(l => urgency(l) === 'red').length;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-val">${total}</div></div>
+    <div class="stat"><div class="stat-label">Activos</div><div class="stat-val orange">${active}</div></div>
+    <div class="stat"><div class="stat-label">Reserva ✓</div><div class="stat-val reserva-c">${reserva}</div></div>
+    <div class="stat"><div class="stat-label">Cerrados</div><div class="stat-val" style="color:var(--text-3)">${cerrado}</div></div>
+    <div class="stat"><div class="stat-label">LATAM</div><div class="stat-val blue-c">${latam}</div></div>
+    <div class="stat"><div class="stat-label">Urgentes</div><div class="stat-val red">${urgent}</div></div>
+  `;
+
+  const banner = document.getElementById('alertBanner');
+  if (urgent > 0) {
+    banner.classList.add('visible');
+    document.getElementById('alertText').textContent = `${urgent} lead${urgent>1?'s':''} llevan +7 días sin contacto. Prioridad hoy.`;
+  } else {
+    banner.classList.remove('visible');
+  }
+}
+
+function renderBoard() {
+  const f = getFilters();
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  STAGES.forEach(stage => {
+    const col = document.createElement('div');
+    const stageLeads = leads.filter(l => l.stage === stage.id)
+      .sort((a,b) => { const o={red:0,amber:1,green:2,none:3}; return (o[urgency(a)]||3)-(o[urgency(b)]||3); });
+    const visible = stageLeads.filter(l => filterLead(l, f));
+    const isReserva = stage.id === 'reserva';
+    col.innerHTML = `
+      <div class="col-header">
+        <span class="col-title ${isReserva?'reserva':stage.id==='cerrado'?'cerrado':''}">${stage.label}</span>
+        <span class="col-count ${isReserva?'reserva':''}">${visible.length}</span>
+      </div>
+      <div class="cards-container" id="col-${stage.id}"></div>
+    `;
+    board.appendChild(col);
+    const container = col.querySelector(`#col-${stage.id}`);
+    if (visible.length === 0) {
+      container.innerHTML = `<div class="empty-col">Sin leads</div>`;
+    } else {
+      visible.forEach(lead => container.appendChild(buildCard(lead)));
+    }
+  });
+}
+
+function buildCard(lead) {
+  const urg = urgency(lead);
+  const stageIdx = STAGES.findIndex(s => s.id === lead.stage);
+  const nas = nextActionStatus(lead);
+  const card = document.createElement('div');
+  card.className = `card urg-${urg}${lead.stage==='reserva'?' stage-reserva':''}`;
+
+  const origenKey = lead.origen==='España'?'spain':lead.origen==='LATAM'?'latam':lead.origen==='Europa'?'europe':'otro';
+  const tagOrigen  = lead.origen  ? `<span class="tag tag-${origenKey}">${lead.origen}</span>` : '';
+  const tagPublico = lead.publico ? `<span class="tag tag-${lead.publico}">${lead.publico==='estudiante'?'Estudiante':'Padres'}</span>` : '';
+  const tagFuente  = lead.fuente  ? `<span class="tag tag-fuente">${lead.fuente}</span>` : '';
+
+  let urgBadge = '';
+  if (urg==='red')   urgBadge = `<span class="urgency-badge ub-red">⚠ ${urgencyLabel(lead)}</span>`;
+  else if (urg==='amber') urgBadge = `<span class="urgency-badge ub-amber">◑ ${urgencyLabel(lead)}</span>`;
+  else if (urg==='green') urgBadge = `<span class="urgency-badge ub-green">✓ ${urgencyLabel(lead)}</span>`;
+
+  const mats = lead.materials || {};
+  const matChips = MATERIALS.map(m =>
+    `<span class="mat-chip ${mats[m.key]?'done':''}">${mats[m.key]?'✓':'○'} ${m.label}</span>`
+  ).join('');
+
+  let nextActionHTML = '';
+  if (lead.nextAction || lead.nextDate) {
+    const label = lead.nextAction || 'Próxima acción';
+    const date  = lead.nextDate ? formatDate(lead.nextDate) : '';
+    const cls   = nas==='overdue'?'overdue':nas==='today'?'today':'upcoming';
+    const icon  = nas==='overdue'?'⚑':nas==='today'?'◉':'→';
+    nextActionHTML = `<div class="card-next-action ${cls}">${icon} ${label}${date?' · '+date:''}</div>`;
+  }
+
+  const prevArrow = stageIdx > 0 ? `<button class="arrow-btn" onclick="event.stopPropagation();moveLead('${lead.id}',-1)">← Atrás</button>` : '';
+  const nextArrow = stageIdx < STAGES.length-1 ? `<button class="arrow-btn" onclick="event.stopPropagation();moveLead('${lead.id}',1)">Avanzar →</button>` : '';
+  const quickBtn  = !['reserva','cerrado'].includes(lead.stage)
+    ? `<button class="btn-quick" onclick="event.stopPropagation();quickContact('${lead.id}')">✓ Contactado hoy</button>` : '';
+
+  card.innerHTML = `
+    <div class="card-top">
+      <div class="card-name">${lead.name}</div>
+      <div class="card-actions">
+        <button class="icon-btn" onclick="event.stopPropagation();openModal('${lead.id}')" title="Editar">✎</button>
+      </div>
+    </div>
+    <div class="card-meta">
+      <div class="card-tags">${tagOrigen}${tagPublico}${tagFuente}</div>
+      ${urgBadge}
+      ${quickBtn}
+    </div>
+    <div class="materials">${matChips}</div>
+    ${nextActionHTML}
+    <div class="move-arrows">${prevArrow}${nextArrow}</div>
+  `;
+  card.addEventListener('click', () => openModal(lead.id));
+  return card;
+}
+
+// ─── ACTIONS ──────────────────────────────────────────────────────────────────
+async function moveLead(id, dir) {
+  const lead = leads.find(l => l.id === id);
+  if (!lead) return;
+  const idx = STAGES.findIndex(s => s.id === lead.stage);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= STAGES.length) return;
+  lead.stage = STAGES[newIdx].id;
+  renderBoard(); renderStats();
+  setSyncState('syncing', 'Guardando...');
+  try { await writeLeadToExcel(lead); setSyncState('ok', `Guardado · ${fmtTime()}`); }
+  catch(e) { setSyncState('error', 'Error al guardar'); }
+}
+
+async function quickContact(id) {
+  const lead = leads.find(l => l.id === id);
+  if (!lead) return;
+  const today = new Date().toISOString().slice(0,10);
+  lead.lastContact = today;
+  lead.log = lead.log || [];
+  lead.log.unshift({ date: today, note: `Contactado — ${new Date().toLocaleDateString('es-ES')}` });
+  if (lead.stage === 'nuevo') lead.stage = 'contactado';
+  renderBoard(); renderStats();
+  setSyncState('syncing', 'Guardando...');
+  try { await writeLeadToExcel(lead); setSyncState('ok', `Guardado · ${fmtTime()}`); }
+  catch(e) { setSyncState('error', 'Error al guardar'); }
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function updateCadenceHint() {
+  const stage = document.getElementById('f-stage').value;
+  const hint  = CADENCE_HINTS[stage] || '';
+  document.getElementById('cadenceHint').innerHTML = hint;
+  document.getElementById('cadenceHintWrap').style.display = hint ? 'block' : 'none';
+}
+
+function openModal(id) {
+  editingId = id || null;
+  const lead = id ? leads.find(l => l.id === id) : null;
+  document.getElementById('modalTitle').textContent = lead ? 'Editar lead' : 'Nuevo lead';
+  document.getElementById('btnDelete').style.display = lead ? 'inline-flex' : 'none';
+  document.getElementById('logSection').style.display = lead ? 'block' : 'none';
+  document.getElementById('f-name').value        = lead?.name        || '';
+  document.getElementById('f-email').value       = lead?.email       || '';
+  document.getElementById('f-phone').value       = lead?.phone       || '';
+  document.getElementById('f-publico').value     = lead?.publico     || 'estudiante';
+  document.getElementById('f-origen').value      = lead?.origen      || 'LATAM';
+  document.getElementById('f-fuente').value      = lead?.fuente      || '';
+  document.getElementById('f-stage').value       = lead?.stage       || 'nuevo';
+  document.getElementById('f-notes').value       = lead?.notes       || '';
+  document.getElementById('f-next-action').value = lead?.nextAction  || '';
+  document.getElementById('f-next-date').value   = lead?.nextDate    || '';
+  const mats = lead?.materials || {};
+  MATERIALS.forEach(m => { document.getElementById(m.id).checked = !!mats[m.key]; });
+  updateCadenceHint();
+  if (lead) renderLog(lead);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function renderLog(lead) {
+  const list    = document.getElementById('logList');
+  const entries = lead.log || [];
+  list.innerHTML = entries.length === 0
+    ? '<div style="font-size:12px;color:var(--text-3);padding:4px 0;">Sin historial aún.</div>'
+    : entries.map(e => `<div class="log-item"><div class="log-date">${e.date||''}</div>${e.note}</div>`).join('');
+}
+
+async function addLogEntry() {
+  const input = document.getElementById('logInput');
+  const note  = input.value.trim();
+  if (!note || !editingId) return;
+  const lead  = leads.find(l => l.id === editingId);
+  if (!lead) return;
+  const today = new Date().toISOString().slice(0,10);
+  lead.log = lead.log || [];
+  lead.log.unshift({ date: today, note });
+  lead.lastContact = today;
+  input.value = '';
+  renderLog(lead);
+  try { await writeLeadToExcel(lead); } catch(e) {}
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+async function saveLead() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('El nombre es obligatorio.'); return; }
+
+  const mats = {};
+  MATERIALS.forEach(m => { mats[m.key] = document.getElementById(m.id).checked; });
+
+  let lead;
+  if (editingId) {
+    lead = leads.find(l => l.id === editingId);
+    if (lead) Object.assign(lead, {
+      name, materials: mats,
+      email:      document.getElementById('f-email').value.trim(),
+      phone:      document.getElementById('f-phone').value.trim(),
+      publico:    document.getElementById('f-publico').value,
+      origen:     document.getElementById('f-origen').value,
+      fuente:     document.getElementById('f-fuente').value,
+      stage:      document.getElementById('f-stage').value,
+      notes:      document.getElementById('f-notes').value.trim(),
+      nextAction: document.getElementById('f-next-action').value.trim(),
+      nextDate:   document.getElementById('f-next-date').value
+    });
+  } else {
+    lead = {
+      id: uid(), name, materials: mats,
+      email:      document.getElementById('f-email').value.trim(),
+      phone:      document.getElementById('f-phone').value.trim(),
+      publico:    document.getElementById('f-publico').value,
+      origen:     document.getElementById('f-origen').value,
+      fuente:     document.getElementById('f-fuente').value,
+      stage:      document.getElementById('f-stage').value,
+      notes:      document.getElementById('f-notes').value.trim(),
+      nextAction: document.getElementById('f-next-action').value.trim(),
+      nextDate:   document.getElementById('f-next-date').value,
+      createdAt:  new Date().toISOString().slice(0,10),
+      lastContact: null,
+      log: []
+    };
+    leads.push(lead);
+  }
+
+  closeModal();
+  renderBoard();
+  renderStats();
+  setSyncState('syncing', 'Guardando...');
+  try { await writeLeadToExcel(lead); setSyncState('ok', `Guardado · ${fmtTime()}`); }
+  catch(e) { setSyncState('error', 'Error al guardar en Excel'); }
+}
+
+async function deleteLead() {
+  if (!editingId || !confirm('¿Eliminar este lead?')) return;
+  const lead = leads.find(l => l.id === editingId);
+  leads = leads.filter(l => l.id !== editingId);
+  closeModal();
+  renderBoard();
+  renderStats();
+  setSyncState('syncing', 'Eliminando...');
+  try { await deleteLeadFromExcel(lead); setSyncState('ok', `Guardado · ${fmtTime()}`); }
+  catch(e) { setSyncState('error', 'Error al eliminar en Excel'); }
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+renderStats();
+renderBoard();
+init().then(() => {
+  setInterval(() => {
+    if (accessToken && !document.getElementById('modalOverlay').classList.contains('open')) {
+      syncFromExcel();
+    }
+  }, 60000);
+});
+</script>
+</body>
+</html>
